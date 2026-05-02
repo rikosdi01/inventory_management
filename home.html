@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .navbar {
+            overflow: hidden;
+            background-color: #EB1E26;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 7vh;
+            z-index: 1000;
+        }
+
+        .navbar a {
+            float: right;
+            display: block;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            padding: 25px;
+            text-decoration: none;
+        }
+
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .content {
+            display: flex;
+            flex-grow: 1;
+            padding-top: 7vh;
+        }
+
+        .category-list {
+            width: 40vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .item-list {
+            width: 80%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .item-list .search-bar {
+            margin-right: 21px;
+        }
+
+        .search-bar,
+        .dropdown-bar {
+            margin-bottom: 10px;
+        }
+
+        .search-bar input,
+        .dropdown-bar select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .button-cell {
+            display: flex;
+            justify-content: flex-end;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .button-cell button {
+            padding: 5px 10px;
+            background-color: #EB1E26;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .button-cell button:hover {
+            background-color: #d01720;
+        }
+
+        .clickable-row {
+            cursor: pointer;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0, 0, 0);
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navbar">
+        <a href="home.html">Menu Utama</a>
+        <a href="kategori.html">Kategori</a>
+        <a href="item.html">Item</a>
+        <a href="stok.html">Tambah Stok</a>
+    </div>
+
+    <div class="content">
+        <div class="category-list">
+            <div class="dropdown-bar">
+                <select id="categoryDropdown">
+                    <option value="">Pilih Kategori...</option>
+                    <!-- Options will be inserted here -->
+                </select>
+            </div>
+            <table id="kategoriTable">
+                <thead>
+                    <tr>
+                        <th>Kategori</th>
+                    </tr>
+                </thead>
+                <tbody id="kategoriList">
+                    <!-- Rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="item-list">
+            <div class="search-bar">
+                <input type="text" id="itemSearchInput" placeholder="Cari item...">
+            </div>
+            <table id="itemsTable">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Total Stok</th>
+                    </tr>
+                </thead>
+                <tbody id="itemsList">
+                    <!-- Rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Info Stok</h2>
+            <table id="itemDetailsTable">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>Kondisi</th>
+                        <th>Rak</th>
+                        <th>Baris</th>
+                        <th>Nomor Kotak</th>
+                        <th>Trip</th>
+                        <th>Tanggal Masuk</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="itemDetailsList">
+                    <!-- Rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { firebaseConfig } from "./firebase-config.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+
+        import { getDatabase, ref, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        const db = getDatabase();
+
+        let kategoriList = document.getElementById('kategoriList');
+        let categoryDropdown = document.getElementById('categoryDropdown');
+        let itemSearchInput = document.getElementById('itemSearchInput');
+        let itemsList = document.getElementById('itemsList');
+
+        itemSearchInput.addEventListener('keyup', filterItems);
+        categoryDropdown.addEventListener('change', filterCategories);
+
+        function displayCategories() {
+            const dbRef = ref(db, 'Kategori');
+            get(dbRef).then((snapshot) => {
+                const kategoriArray = [];
+                snapshot.forEach((childSnapshot) => {
+                    const kategoriKey = childSnapshot.key;
+                    const kategoriData = childSnapshot.val().kategori;
+                    kategoriArray.push({ key: kategoriKey, data: kategoriData });
+                });
+
+                kategoriArray.sort((a, b) => a.data.toLowerCase() > b.data.toLowerCase() ? 1 : -1);
+
+                kategoriList.innerHTML = '';
+                categoryDropdown.innerHTML = '<option value="">Pilih Kategori...</option>';
+                kategoriArray.forEach((kategoriObj) => {
+                    const kategoriKey = kategoriObj.key;
+                    const kategoriData = kategoriObj.data;
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'clickable-row';
+                    tr.setAttribute('data-key', kategoriKey);
+                    tr.setAttribute('data-kategori', kategoriData);
+                    tr.addEventListener('click', () => {
+                        displayItems(kategoriData);
+                    });
+
+                    const tdKategori = document.createElement('td');
+                    tdKategori.textContent = kategoriData;
+
+                    tr.appendChild(tdKategori);
+                    kategoriList.appendChild(tr);
+
+                    const option = document.createElement('option');
+                    option.value = kategoriData;
+                    option.textContent = kategoriData;
+                    categoryDropdown.appendChild(option);
+                });
+            }).catch((error) => {
+                console.error("Error fetching data:", error);
+            });
+        }
+
+        function filterItems() {
+            const filter = itemSearchInput.value.toLowerCase();
+            const rows = itemsList.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const text = row.getElementsByTagName('td')[0].textContent || row.getElementsByTagName('td')[0].innerText;
+                if (text.toLowerCase().includes(filter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        }
+
+        function filterCategories() {
+            const filter = categoryDropdown.value;
+            const rows = kategoriList.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const text = row.getElementsByTagName('td')[0].textContent || row.getElementsByTagName('td')[0].innerText;
+                if (filter === "" || text === filter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+
+            if (filter !== "") {
+                displayItems(filter);
+            }
+        }
+
+        function displayItems(kategori) {
+            const dbRef = ref(db, 'Items');
+            const queryRef = query(dbRef, orderByChild('kategori'), equalTo(kategori));
+
+            get(queryRef).then((snapshot) => {
+                const itemsArray = [];
+                snapshot.forEach((childSnapshot) => {
+                    const itemKey = childSnapshot.key;
+                    const itemData = childSnapshot.val();
+                    itemsArray.push({ key: itemKey, data: itemData });
+                });
+
+                itemsList.innerHTML = '';
+                if (itemsArray.length === 0) {
+                    const tr = document.createElement('tr');
+                    const td = document.createElement('td');
+                    td.setAttribute('colspan', '2'); // Adjust according to the number of columns in your table
+                    td.textContent = 'Tidak ada Item';
+                    tr.appendChild(td);
+                    itemsList.appendChild(tr);
+                } else {
+                    itemsArray.forEach((itemObj) => {
+                        const itemKey = itemObj.key;
+                        const itemData = itemObj.data;
+
+                        const tr = document.createElement('tr');
+                        tr.className = 'clickable-row';
+                        tr.setAttribute('data-item', itemData.item);
+                        tr.addEventListener('click', () => {
+                            showItemModal(itemData.item);
+                        });
+
+                        const tdItem = document.createElement('td');
+                        tdItem.textContent = itemData.item;
+
+                        const tdTotalStok = document.createElement('td');
+                        getTotalStock(itemData.item, (totalStock) => {
+                            tdTotalStok.textContent = totalStock;
+                        });
+
+                        tr.appendChild(tdItem);
+                        tr.appendChild(tdTotalStok);
+
+                        itemsList.appendChild(tr);
+                    });
+                }
+            }).catch((error) => {
+                console.error("Error fetching data:", error);
+            });
+        }
+
+
+        const modal = document.getElementById('itemModal');
+        const closeModal = document.getElementsByClassName('close')[0];
+
+        closeModal.onclick = function () {
+            modal.style.display = "none";
+        };
+
+        function getTotalStock(itemName, callback) {
+            const dbRef = ref(db, 'ItemInfo');
+            const itemQuery = query(dbRef, orderByChild('item'), equalTo(itemName));
+            get(itemQuery).then((snapshot) => {
+                let totalStock = 0;
+                snapshot.forEach((childSnapshot) => {
+                    const itemData = childSnapshot.val();
+                    totalStock += parseInt(itemData.qty);
+                });
+                callback(totalStock);
+            }).catch((error) => {
+                console.error("Error fetching total stock:", error);
+                callback(0);
+            });
+        }
+
+        function showItemModal(item) {
+            const dbRef = ref(db, 'ItemInfo');
+            const queryRef = query(dbRef, orderByChild('item'), equalTo(item));
+
+            get(queryRef).then((snapshot) => {
+                const itemsArray = [];
+                snapshot.forEach((childSnapshot) => {
+                    const itemKey = childSnapshot.key;
+                    const itemData = childSnapshot.val();
+                    itemsArray.push({ key: itemKey, data: itemData });
+                });
+
+                const itemDetailsList = document.getElementById('itemDetailsList');
+                itemDetailsList.innerHTML = '';
+
+                if (itemsArray.length === 0) {
+                    const tr = document.createElement('tr');
+                    const td = document.createElement('td');
+                    td.setAttribute('colspan', '9'); // Adjust according to the number of columns in your table
+                    td.textContent = 'Tidak ada Stok';
+                    tr.appendChild(td);
+                    itemDetailsList.appendChild(tr);
+
+                } else {
+                    itemsArray.forEach((itemObj) => {
+                        const itemData = itemObj.data;
+
+                        const tr = document.createElement('tr');
+
+                        const tdItem = document.createElement('td');
+                        tdItem.textContent = itemData.item;
+
+                        const tdQty = document.createElement('td');
+                        tdQty.textContent = itemData.qty;
+
+                        const tdKondisi = document.createElement('td');
+                        tdKondisi.textContent = itemData.kondisi;
+
+                        const tdRak = document.createElement('td');
+                        tdRak.textContent = itemData.rak;
+
+                        const tdBaris = document.createElement('td');
+                        tdBaris.textContent = itemData.baris;
+
+                        const tdNomorKotak = document.createElement('td');
+                        tdNomorKotak.textContent = itemData.nomorKotak;
+
+                        const tdTrip = document.createElement('td');
+                        tdTrip.textContent = itemData.trip;
+
+                        const tdTanggal = document.createElement('td');
+                        tdTanggal.textContent = itemData.tanggal;
+
+                        tr.appendChild(tdItem);
+                        tr.appendChild(tdQty);
+                        tr.appendChild(tdKondisi);
+                        tr.appendChild(tdRak);
+                        tr.appendChild(tdBaris);
+                        tr.appendChild(tdNomorKotak);
+                        tr.appendChild(tdTrip);
+                        tr.appendChild(tdTanggal);
+
+                        itemDetailsList.appendChild(tr);
+                    });
+                }
+
+                modal.style.display = "block";
+            }).catch((error) => {
+                console.error("Error fetching data:", error);
+            });
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            displayCategories();
+        });
+    </script>
+</body>
+
+</html>
